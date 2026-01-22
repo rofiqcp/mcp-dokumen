@@ -6,7 +6,7 @@ import os
 import subprocess
 import logging
 import tempfile
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +74,12 @@ def convert_with_pandoc(
     extra_args: Optional[List[str]] = None,
     reference_doc: Optional[str] = None,
     template: Optional[str] = None,
-    standalone: bool = True
+    standalone: bool = True,
+    metadata: Optional[Dict[str, str]] = None,
+    variables: Optional[Dict[str, str]] = None,
+    filters: Optional[List[str]] = None,
+    defaults_file: Optional[str] = None,
+    pdf_engine: Optional[str] = None
 ) -> Tuple[bool, str]:
     """
     Convert a document using Pandoc.
@@ -88,6 +93,11 @@ def convert_with_pandoc(
         reference_doc: Reference document for formatting (e.g., for DOCX/PPTX)
         template: Template file path
         standalone: Generate standalone document
+        metadata: Key/value metadata to pass (--metadata key=value)
+        variables: Pandoc template variables (--variable key=value)
+        filters: List of Pandoc filters to apply (--filter path)
+        defaults_file: Path to defaults YAML file (--defaults file)
+        pdf_engine: PDF engine (e.g., xelatex, wkhtmltopdf)
     
     Returns:
         Tuple of (success, message or output_path)
@@ -130,6 +140,25 @@ def convert_with_pandoc(
     if template:
         if os.path.exists(template):
             cmd.extend(['--template', template])
+
+    if defaults_file:
+        if os.path.exists(defaults_file):
+            cmd.extend(['--defaults', defaults_file])
+
+    if filters:
+        for flt in filters:
+            cmd.extend(['--filter', flt])
+
+    if metadata:
+        for key, val in metadata.items():
+            cmd.extend(['--metadata', f"{key}={val}"])
+
+    if variables:
+        for key, val in variables.items():
+            cmd.extend(['--variable', f"{key}={val}"])
+
+    if pdf_engine:
+        cmd.extend(['--pdf-engine', pdf_engine])
     
     if extra_args:
         cmd.extend(extra_args)

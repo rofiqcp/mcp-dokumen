@@ -231,6 +231,64 @@ def register_conversion_tools(mcp_server, doc_processor: DocumentProcessor):
         if success:
             return f"PPTX created: {result}"
         return f"Error: {result}"
+
+    # ==================== Advanced Pandoc ====================
+
+    @mcp_server.tool()
+    async def convert_with_pandoc_advanced(
+        input_path: str,
+        output_path: str,
+        from_format: Optional[str] = None,
+        to_format: Optional[str] = None,
+        filters: Optional[list[str]] = None,
+        defaults_file: Optional[str] = None,
+        metadata: Optional[dict[str, str]] = None,
+        variables: Optional[dict[str, str]] = None,
+        reference_doc: Optional[str] = None,
+        template: Optional[str] = None,
+        pdf_engine: Optional[str] = None,
+        extra_args: Optional[list[str]] = None,
+        standalone: bool = True,
+    ) -> str:
+        """
+        Advanced Pandoc conversion with filters, defaults, metadata, variables, and custom PDF engine.
+
+        Args:
+            input_path: Input file path
+            output_path: Output file path
+            from_format: Pandoc input format (optional, auto-detect by extension)
+            to_format: Pandoc output format (optional, auto-detect by extension)
+            filters: List of Pandoc filters to apply
+            defaults_file: Path to defaults YAML file
+            metadata: Metadata key/value pairs (--metadata key=value)
+            variables: Template variables (--variable key=value)
+            reference_doc: Reference docx/pptx for styling
+            template: Pandoc template path
+            pdf_engine: PDF engine (e.g., xelatex)
+            extra_args: Additional Pandoc args
+            standalone: Produce standalone document
+
+        Returns:
+            Output path or error message
+        """
+        success, result = convert_with_pandoc(
+            input_path=input_path,
+            output_path=output_path,
+            from_format=from_format,
+            to_format=to_format,
+            extra_args=extra_args,
+            reference_doc=reference_doc,
+            template=template,
+            standalone=standalone,
+            metadata=metadata,
+            variables=variables,
+            filters=filters,
+            defaults_file=defaults_file,
+            pdf_engine=pdf_engine,
+        )
+        if success:
+            return f"Converted with Pandoc: {result}"
+        return f"Error: {result}"
     
     @mcp_server.tool()
     async def convert_markdown_to_html(
