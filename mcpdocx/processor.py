@@ -5,9 +5,12 @@ Handles all document manipulation logic.
 
 import os
 import re
+import json
 import logging
 import hashlib
 from typing import Optional, Dict, Any, List
+from pathlib import Path
+from functools import wraps
 
 from docx import Document
 from docx.shared import Pt, Inches, Cm, RGBColor, Twips
@@ -20,6 +23,38 @@ from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
 logger = logging.getLogger(__name__)
+
+# Path to data.json for tool usage tracking
+DATA_FILE = Path(__file__).parent / "data.json"
+
+
+def track_tool_usage(tool_name: str):
+    """Track usage of a tool in data.json."""
+    try:
+        # Read current data
+        if DATA_FILE.exists():
+            with open(DATA_FILE, 'r') as f:
+                data = json.load(f)
+        else:
+            data = {"tool_usage": {}}
+        
+        # Initialize tool_usage if not exists
+        if "tool_usage" not in data:
+            data["tool_usage"] = {}
+        
+        # Update count
+        if tool_name in data["tool_usage"]:
+            data["tool_usage"][tool_name] += 1
+        else:
+            data["tool_usage"][tool_name] = 1
+        
+        # Write back to file
+        with open(DATA_FILE, 'w') as f:
+            json.dump(data, f, indent=2)
+        
+        logger.debug(f"Tool usage tracked: {tool_name} ({data['tool_usage'][tool_name]} times)")
+    except Exception as e:
+        logger.error(f"Failed to track tool usage for {tool_name}: {e}")
 
 
 def parse_color(color_str: str) -> Optional[tuple]:
@@ -137,6 +172,7 @@ class DocumentProcessor:
         self.comments = []
         return "Document closed"
     
+
     def get_document_info(self) -> str:
         """Get information about the current document."""
         if not self.current_document:
@@ -151,6 +187,7 @@ class DocumentProcessor:
         info.append(f"Word count: {word_count}")
         return "\n".join(info)
     
+
     def get_document_text(self) -> str:
         """Get all text from the document."""
         if not self.current_document:
@@ -158,6 +195,7 @@ class DocumentProcessor:
         paragraphs = [p.text for p in self.current_document.paragraphs]
         return "\n\n".join(paragraphs) if paragraphs else "Document is empty"
     
+
     def list_open_documents(self) -> str:
         """List all open documents."""
         if not self.documents:
@@ -169,6 +207,7 @@ class DocumentProcessor:
             lines.append(f"- {doc}{marker}")
         return "Open documents:\n" + "\n".join(lines)
     
+
     def switch_document(self, file_path: str) -> str:
         """Switch to a different open document."""
         if file_path not in self.documents:
@@ -196,6 +235,7 @@ class DocumentProcessor:
         for child in list(p):
             p.remove(child)
     
+
     def add_paragraph(self, text: str, style: Optional[str] = None, bold: bool = False,
                       italic: bool = False, underline: bool = False,
                       font_size: Optional[int] = None, font_name: Optional[str] = None,
@@ -234,6 +274,7 @@ class DocumentProcessor:
             logger.error(f"Failed to add paragraph: {e}")
             return f"Error: {e}"
     
+
     def add_heading(self, text: str, level: int = 1) -> str:
         """Add a heading."""
         if not self.current_document:
@@ -245,6 +286,7 @@ class DocumentProcessor:
             logger.error(f"Failed to add heading: {e}")
             return f"Error: {e}"
     
+
     def add_page_break(self) -> str:
         """Add a page break."""
         if not self.current_document:
@@ -255,6 +297,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def get_paragraph_text(self, index: int) -> str:
         """Get paragraph text by index."""
         if not self.current_document:
@@ -264,6 +307,7 @@ class DocumentProcessor:
             return f"Error: Index out of range (0-{len(paragraphs)-1})"
         return paragraphs[index].text
     
+
     def set_paragraph_text(self, index: int, text: str) -> str:
         """Set paragraph text by index."""
         if not self.current_document:
@@ -283,6 +327,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def delete_paragraph(self, index: int) -> str:
         """Delete paragraph by index."""
         if not self.current_document:
@@ -297,6 +342,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def insert_paragraph_after(self, index: int, text: str, style: Optional[str] = None) -> str:
         """Insert paragraph after index."""
         if not self.current_document:
@@ -316,6 +362,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def count_paragraphs(self) -> str:
         """Count paragraphs."""
         if not self.current_document:
@@ -324,6 +371,7 @@ class DocumentProcessor:
     
     # ==================== Search & Replace ====================
     
+
     def search_text(self, keyword: str) -> str:
         """Search for text in the document."""
         if not self.current_document:
@@ -341,6 +389,7 @@ class DocumentProcessor:
             return f"'{keyword}' not found"
         return f"Found {len(results)} matches:\n" + "\n".join(results)
     
+
     def find_and_replace(self, find_text: str, replace_text: str) -> str:
         """Find and replace text."""
         if not self.current_document:
@@ -366,6 +415,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def batch_replace(self, replacements: Dict[str, str]) -> str:
         """Batch replace multiple strings."""
         if not self.current_document:
@@ -393,6 +443,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def redact_text(self, pattern: str, replacement: str = "[REDACTED]", use_regex: bool = False) -> str:
         """Redact text matching pattern."""
         if not self.current_document:
@@ -428,6 +479,7 @@ class DocumentProcessor:
     
     # ==================== Table Operations ====================
     
+
     def add_table(self, rows: int, cols: int, data: Optional[List[List[str]]] = None,
                   style: str = "Table Grid") -> str:
         """Add a table."""
@@ -446,6 +498,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def get_tables_info(self) -> str:
         """Get info about all tables."""
         if not self.current_document:
@@ -459,6 +512,7 @@ class DocumentProcessor:
             info.append(f"Table {i}: {len(table.rows)} rows x {len(table.columns)} cols, style: {style}")
         return "\n".join(info)
     
+
     def get_table_data(self, table_index: int) -> str:
         """Get table content."""
         if not self.current_document:
@@ -473,6 +527,7 @@ class DocumentProcessor:
             result.append(" | ".join(row_data))
         return "\n".join(result)
     
+
     def edit_table_cell(self, table_index: int, row_index: int, col_index: int, text: str) -> str:
         """Edit table cell."""
         if not self.current_document:
@@ -491,6 +546,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def add_table_row(self, table_index: int, data: Optional[List[str]] = None) -> str:
         """Add row to table."""
         if not self.current_document:
@@ -509,6 +565,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def delete_table_row(self, table_index: int, row_index: int) -> str:
         """Delete row from table."""
         if not self.current_document:
@@ -526,6 +583,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def merge_table_cells(self, table_index: int, start_row: int, start_col: int,
                           end_row: int, end_col: int) -> str:
         """Merge table cells."""
@@ -543,6 +601,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def set_table_cell_shading(self, table_index: int, row_index: int, 
                                 col_index: int, fill_color: str = "FFFF00") -> str:
         """Set cell background color."""
@@ -561,6 +620,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def apply_table_alternating_rows(self, table_index: int, 
                                       color1: str = "FFFFFF", color2: str = "F2F2F2") -> str:
         """Apply alternating row colors."""
@@ -582,6 +642,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def highlight_table_header(self, table_index: int, header_color: str = "4472C4",
                                 text_color: str = "FFFFFF") -> str:
         """Highlight table header row."""
@@ -609,6 +670,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def set_column_width(self, table_index: int, col_index: int, width_cm: float) -> str:
         """Set column width."""
         if not self.current_document:
@@ -625,6 +687,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def set_row_height(self, table_index: int, row_index: int, 
                        height_cm: float, rule: str = "exact") -> str:
         """Set row height."""
@@ -657,6 +720,7 @@ class DocumentProcessor:
     
     # ==================== Header & Footer ====================
     
+
     def add_header(self, text: str, section_index: int = 0, alignment: str = "center") -> str:
         """Add header text."""
         if not self.current_document:
@@ -677,6 +741,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def add_footer(self, text: str, section_index: int = 0, alignment: str = "center") -> str:
         """Add footer text."""
         if not self.current_document:
@@ -709,6 +774,7 @@ class DocumentProcessor:
                 el.text = "PAGE"
             paragraph._p.append(el)
     
+
     def add_page_numbers(self, position: str = "footer", alignment: str = "center",
                          format_string: str = "Page {page}", section_index: int = 0) -> str:
         """Add page numbers."""
@@ -733,6 +799,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def get_header_text(self, section_index: int = 0) -> str:
         """Get header text."""
         if not self.current_document:
@@ -744,6 +811,7 @@ class DocumentProcessor:
         texts = [p.text for p in header.paragraphs if p.text]
         return "\n".join(texts) or "(empty)"
     
+
     def get_footer_text(self, section_index: int = 0) -> str:
         """Get footer text."""
         if not self.current_document:
@@ -755,6 +823,7 @@ class DocumentProcessor:
         texts = [p.text for p in footer.paragraphs if p.text]
         return "\n".join(texts) or "(empty)"
     
+
     def remove_header(self, section_index: int = 0) -> str:
         """Remove header."""
         if not self.current_document:
@@ -771,6 +840,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def remove_footer(self, section_index: int = 0) -> str:
         """Remove footer."""
         if not self.current_document:
@@ -789,6 +859,7 @@ class DocumentProcessor:
     
     # ==================== Image Operations ====================
     
+
     def add_image(self, image_path: str, width_inches: Optional[float] = None,
                   height_inches: Optional[float] = None) -> str:
         """Add image to document."""
@@ -811,6 +882,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def add_image_base64(self, base64_data: str, width_inches: Optional[float] = None) -> str:
         """Add image from base64 data."""
         if not self.current_document:
@@ -832,6 +904,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def list_images(self) -> str:
         """List all images."""
         if not self.current_document:
@@ -850,6 +923,7 @@ class DocumentProcessor:
     
     # ==================== List Operations ====================
     
+
     def add_bulleted_list(self, items: List[str], style: str = "List Bullet") -> str:
         """Add bulleted list."""
         if not self.current_document:
@@ -861,6 +935,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def add_numbered_list(self, items: List[str], style: str = "List Number") -> str:
         """Add numbered list."""
         if not self.current_document:
@@ -874,6 +949,7 @@ class DocumentProcessor:
     
     # ==================== Page Layout ====================
     
+
     def set_page_margins(self, top: Optional[float] = None, bottom: Optional[float] = None,
                          left: Optional[float] = None, right: Optional[float] = None,
                          section_index: int = 0) -> str:
@@ -897,6 +973,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def set_page_size(self, width: float, height: float, section_index: int = 0) -> str:
         """Set page size in cm."""
         if not self.current_document:
@@ -912,6 +989,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def set_page_orientation(self, orientation: str, section_index: int = 0) -> str:
         """Set page orientation."""
         if not self.current_document:
@@ -940,6 +1018,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def get_page_info(self, section_index: int = 0) -> str:
         """Get page layout info."""
         if not self.current_document:
@@ -960,6 +1039,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def add_section(self, section_type: str = "NEW_PAGE") -> str:
         """Add a new section."""
         if not self.current_document:
@@ -977,6 +1057,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def list_sections(self) -> str:
         """List all sections."""
         if not self.current_document:
@@ -995,6 +1076,7 @@ class DocumentProcessor:
     
     # ==================== Styles ====================
     
+
     def list_styles(self) -> str:
         """List available paragraph styles."""
         if not self.current_document:
@@ -1009,6 +1091,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def apply_style(self, paragraph_index: int, style_name: str) -> str:
         """Apply style to paragraph."""
         if not self.current_document:
@@ -1022,6 +1105,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def batch_format_paragraphs(self, style_name: str, start_index: int = 0, 
                                  end_index: Optional[int] = None) -> str:
         """Apply style to range of paragraphs."""
@@ -1040,6 +1124,7 @@ class DocumentProcessor:
     
     # ==================== Metadata ====================
     
+
     def get_metadata(self) -> str:
         """Get document metadata."""
         if not self.current_document:
@@ -1057,6 +1142,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def set_metadata(self, title: Optional[str] = None, author: Optional[str] = None,
                      subject: Optional[str] = None, keywords: Optional[str] = None) -> str:
         """Set document metadata."""
@@ -1078,6 +1164,7 @@ class DocumentProcessor:
     
     # ==================== Comments ====================
     
+
     def add_comment(self, comment_text: str, paragraph_index: int, 
                     author: str = "MCP", initials: str = "MCP") -> str:
         """Add a comment marker."""
@@ -1101,6 +1188,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def get_all_comments(self) -> str:
         """Get all comments."""
         if not self.comments:
@@ -1110,6 +1198,7 @@ class DocumentProcessor:
             lines.append(f"{idx}: Para {c['paragraph']} by {c['author']} - {c['text']}")
         return "\n".join(lines)
     
+
     def delete_all_comments(self) -> str:
         """Delete all comments."""
         self.comments = []
@@ -1117,6 +1206,7 @@ class DocumentProcessor:
     
     # ==================== Hyperlinks & Bookmarks ====================
     
+
     def add_hyperlink(self, paragraph_index: int, text: str, url: str) -> str:
         """Add hyperlink to paragraph."""
         if not self.current_document:
@@ -1145,6 +1235,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def add_bookmark(self, paragraph_index: int, bookmark_name: str) -> str:
         """Add bookmark to paragraph."""
         if not self.current_document:
@@ -1166,6 +1257,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def list_bookmarks(self) -> str:
         """List all bookmarks."""
         if not self.current_document:
@@ -1186,6 +1278,7 @@ class DocumentProcessor:
     
     # ==================== Watermark ====================
     
+
     def add_text_watermark(self, text: str = "CONFIDENTIAL", section_index: int = 0) -> str:
         """Add text watermark."""
         if not self.current_document:
@@ -1206,6 +1299,7 @@ class DocumentProcessor:
     
     # ==================== Document Merge ====================
     
+
     def merge_documents(self, file_paths: List[str]) -> str:
         """Merge multiple documents into current."""
         if not self.current_document:
@@ -1236,6 +1330,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def copy_document(self, dest_path: str) -> str:
         """Copy current document."""
         if not self.current_document:
@@ -1251,6 +1346,7 @@ class DocumentProcessor:
     
     # ==================== TOC ====================
     
+
     def add_table_of_contents(self, title: str = "Table of Contents", heading_levels: int = 3) -> str:
         """Add Table of Contents."""
         if not self.current_document:
@@ -1284,6 +1380,7 @@ class DocumentProcessor:
     
     # ==================== Track Changes ====================
     
+
     def enable_track_changes(self) -> str:
         """Enable track changes."""
         if not self.current_document:
@@ -1298,6 +1395,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def disable_track_changes(self) -> str:
         """Disable track changes."""
         if not self.current_document:
@@ -1311,6 +1409,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def accept_all_changes(self) -> str:
         """Accept all tracked changes."""
         if not self.current_document:
@@ -1331,6 +1430,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def reject_all_changes(self) -> str:
         """Reject all tracked changes."""
         if not self.current_document:
@@ -1353,6 +1453,7 @@ class DocumentProcessor:
     
     # ==================== Protection ====================
     
+
     def protect_document(self, password: Optional[str] = None, 
                          protection_type: str = "readOnly") -> str:
         """Protect document."""
@@ -1376,6 +1477,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def unprotect_document(self) -> str:
         """Remove document protection."""
         if not self.current_document:
@@ -1392,6 +1494,7 @@ class DocumentProcessor:
     
     # ==================== Footnotes ====================
     
+
     def add_footnote(self, text: str, paragraph_index: int) -> str:
         """Add a footnote."""
         if not self.current_document:
@@ -1411,6 +1514,7 @@ class DocumentProcessor:
     
     # ==================== Statistics ====================
     
+
     def get_word_count(self) -> str:
         """Get word count statistics."""
         if not self.current_document:
@@ -1427,6 +1531,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def get_document_statistics(self) -> str:
         """Get comprehensive statistics."""
         if not self.current_document:
@@ -1451,6 +1556,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def get_document_outline(self) -> str:
         """Get document outline from headings."""
         if not self.current_document:
@@ -1469,6 +1575,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def get_document_structure(self) -> str:
         """Get structural overview."""
         if not self.current_document:
@@ -1491,6 +1598,7 @@ class DocumentProcessor:
     
     # ==================== File Operations ====================
     
+
     def list_docx_files(self, directory: str) -> str:
         """List docx files in directory."""
         try:
@@ -1510,6 +1618,7 @@ class DocumentProcessor:
     
     # ==================== Mail Merge ====================
     
+
     def add_merge_field(self, field_name: str) -> str:
         """Add mail merge field."""
         if not self.current_document:
@@ -1536,6 +1645,7 @@ class DocumentProcessor:
         except Exception as e:
             return f"Error: {e}"
     
+
     def execute_mail_merge(self, data: List[Dict[str, str]], output_pattern: str) -> str:
         """Execute mail merge."""
         if not self.current_document:

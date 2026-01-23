@@ -1,0 +1,15 @@
+{
+  "tool_usage": {
+    "create_document": 3,
+    "add_heading": 68,
+    "add_paragraph": 91,
+    "add_bulleted_list": 15,
+    "add_numbered_list": 25,
+    "add_page_break": 3,
+    "save_document": 3,
+    "switch_document": 3,
+    "get_document_info": 4,
+    "get_document_text": 1,
+    "close_document": 1
+  }
+}

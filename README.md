@@ -1,6 +1,6 @@
 # MCP DOCX Unified Server
 
-Server Model Context Protocol (MCP) untuk membaca, membuat, dan mengedit dokumen Word (.docx) dengan 90+ tool terintegrasi.
+Server Model Context Protocol (MCP) untuk membaca, membuat, dan mengedit dokumen Word (.docx) dengan 90 tool terintegrasi.
 
 ## Peringatan Versi Python
 
@@ -114,6 +114,60 @@ Server Model Context Protocol (MCP) untuk membaca, membuat, dan mengedit dokumen
 - Metadata, komentar, footnote, TOC, outline, struktur, statistik, word count.
 - Track changes (enable/disable/accept/reject) dan proteksi dokumen.
 - Mail merge, copy/merge dokumen, komparasi dokumen, list file .docx.
+- **Automatic Tool Usage Tracking**: Setiap tool yang digunakan otomatis dicatat di `mcpdocx/data.json`.
+
+## Tool Usage Tracking
+
+Server ini secara otomatis melacak penggunaan setiap tool dalam file `mcpdocx/data.json`. Fitur ini berguna untuk:
+
+- Menganalisis tool mana yang paling sering digunakan
+- Memantau pola penggunaan server
+- Debugging dan monitoring
+
+### Cara Kerja
+
+Setiap kali tool dipanggil, fungsi `track_tool_usage()` akan otomatis dijalankan dan mencatat penggunaan ke `data.json`:
+
+```python
+# Di dalam setiap tool di server.py
+async def create_document(file_path: str, title: Optional[str] = None) -> str:
+    """Create a new Word document."""
+    track_tool_usage("create_document")  # Otomatis mencatat penggunaan
+    return processor.create_document(file_path, title)
+```
+
+### Format Data
+
+File `data.json` menyimpan data dalam format:
+
+```json
+{
+  "tool_usage": {
+    "create_document": 5,
+    "add_paragraph": 12,
+    "save_document": 5
+  }
+}
+```
+
+### Melihat Statistik
+
+Untuk melihat statistik penggunaan, baca langsung file `data.json` atau gunakan script Python:
+
+```python
+import json
+
+with open('mcpdocx/data.json', 'r') as f:
+    data = json.load(f)
+    usage = data.get('tool_usage', {})
+    
+    # Sort by usage count
+    sorted_usage = sorted(usage.items(), key=lambda x: x[1], reverse=True)
+    
+    print("Top 10 Most Used Tools:")
+    for tool, count in sorted_usage[:10]:
+        print(f"{tool}: {count}")
+```
 
 ## Lisensi
 
